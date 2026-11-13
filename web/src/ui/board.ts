@@ -17,11 +17,17 @@
  * context menu is suppressed for that press only, and the click that follows
  * the eventual left-button release is swallowed so it can't re-select.
  *
+ * Arrows and circles: right-drag draws an arrow, right-click circles a
+ * square (see annotations.ts). That only happens when no left-button drag is
+ * in progress, so right-click-to-cancel keeps working. A left press or a new
+ * move clears them.
+ *
  * Squares are real buttons so the board is keyboard- and screen-reader
  * accessible without extra work.
  */
 import type { Move, Square } from "chess.js";
 import type { GameSession } from "../core/game";
+import { colorFor, renderAnnotations, toggle, type Annotation } from "./annotations";
 
 const GLYPH: Record<string, string> = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
 const NAME: Record<string, string> = { k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn" };
@@ -55,6 +61,12 @@ export class BoardView {
   /** True between a cancel and the context-menu event the right press produces. */
   private blockContextMenu = false;
   flipped = false;
+  /** Right-button arrows and circles currently on the board. */
+  private annotations: Annotation[] = [];
+  /** Right-button press in progress: where it started and the shape it would draw. */
+  private drawing: { from: Square; pointerId: number; preview: Annotation } | null = null;
+  /** Ply the annotations belong to; a new move clears them. */
+  private annotationPly = -1;
 
   constructor(
     private root: HTMLElement,
@@ -78,6 +90,8 @@ export class BoardView {
       if (e.button === 2 && this.drag) this.userCancel(e);
     });
     window.addEventListener("pointerup", (e) => this.onCancelledRelease(e));
+    // The board never shows the browser menu: right button is for arrows and cancelling.
+    root.addEventListener("contextmenu", (e) => e.preventDefault());
     window.addEventListener("contextmenu", (e) => {
       if (this.drag || this.blockContextMenu) {
         e.preventDefault();
@@ -104,6 +118,15 @@ export class BoardView {
       this.userCancel(e);
       return;
     }
+    if (e.button === 2 && e.pointerType === "mouse") {
+      this.startDrawing(e);
+      return;
+    }
+    if (e.button === 0 && (this.annotations.length || this.drawing)) {
+      this.annotations = [];
+      this.drawing = null;
+      this.renderOverlay();
+    }
     if (e.button !== 0 || !this.cb.canInteract()) return;
     const sq = squareAt(e.target);
     if (!sq) return;
@@ -113,6 +136,10 @@ export class BoardView {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    if (this.drawing && e.pointerId === this.drawing.pointerId) {
+      this.updateDrawing(e);
+      return;
+    }
     const d = this.drag;
     if (!d || e.pointerId !== d.pointerId) return;
     if (e.pointerType === "mouse" && e.buttons & 2) {
@@ -129,6 +156,10 @@ export class BoardView {
   }
 
   private onPointerUp(e: PointerEvent): void {
+    if (this.drawing && e.pointerId === this.drawing.pointerId) {
+      this.finishDrawing(e);
+      return;
+    }
     const d = this.drag;
     if (!d || e.pointerId !== d.pointerId) return;
     if (!d.ghost) {
@@ -148,6 +179,44 @@ export class BoardView {
     }
     // Dropped off-target: keep the piece selected so click-to-move still works.
     this.render();
+  }
+
+  // ---- Arrows and circles (right button) --------------------------------------
+
+  private startDrawing(e: PointerEvent): void {
+    const from = squareAt(e.target);
+    if (!from) return;
+    e.preventDefault();
+    this.drawing = { from, pointerId: e.pointerId, preview: { from, to: from, color: colorFor(e) } };
+    // Keep getting moves/release even if the pointer leaves the board.
+    this.root.setPointerCapture(e.pointerId);
+    this.renderOverlay();
+  }
+
+  private updateDrawing(e: PointerEvent): void {
+    const dr = this.drawing!;
+    const to = squareAtPoint(e.clientX, e.clientY) ?? dr.preview.to;
+    const color = colorFor(e);
+    if (to === dr.preview.to && color === dr.preview.color) return;
+    dr.preview = { from: dr.from, to, color };
+    this.renderOverlay();
+  }
+
+  private finishDrawing(e: PointerEvent): void {
+    const dr = this.drawing!;
+    this.drawing = null;
+    if (this.root.hasPointerCapture?.(e.pointerId)) this.root.releasePointerCapture(e.pointerId);
+    // Released off the board: draw nothing.
+    const to = squareAtPoint(e.clientX, e.clientY);
+    if (to) this.annotations = toggle(this.annotations, { from: dr.from, to, color: colorFor(e) });
+    this.renderOverlay();
+  }
+
+  /** Redraw only the arrow layer (cheap; used while drawing). */
+  private renderOverlay(): void {
+    this.root.querySelector(":scope > .annotations")?.remove();
+    if (!this.annotations.length && !this.drawing) return;
+    this.root.appendChild(renderAnnotations(this.annotations, this.flipped, this.drawing?.preview));
   }
 
   /** Abort the current drag at the user's request: piece goes back, nothing stays selected. */
@@ -272,6 +341,12 @@ export class BoardView {
       }
     }
     this.root.replaceChildren(frag);
+    const ply = session.historyUci.length;
+    if (ply !== this.annotationPly) {
+      this.annotationPly = ply;
+      this.annotations = [];
+    }
+    this.renderOverlay();
   }
 }
 
