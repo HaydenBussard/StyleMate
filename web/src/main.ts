@@ -48,6 +48,7 @@ const els = {
   opponentMeta: $("opponent-meta"),
   opponentBadge: $("opponent-badge"),
   youMeta: $("you-meta"),
+  outcomeTip: $<HTMLElement>("outcome-tip"),
   outcome: $("outcome"),
   showEval: $<HTMLInputElement>("show-eval"),
   soundOn: $<HTMLInputElement>("sound-on"),
@@ -367,11 +368,12 @@ function renderDecision(): void {
 function renderOutcome(): void {
   const d = [...match.decisions].reverse().find((x) => x.analysis?.value);
   els.outcome.classList.toggle("flipped", view.flipped);
+  const note = "Win chance for these ratings, not engine eval.";
   if (!d || !d.analysis?.value) {
     els.outcomeFill.style.height = "50%";
     els.outcomeLabel.textContent = "";
-    els.outcome.setAttribute("aria-label", "No outcome estimate yet");
-    els.outcome.title = "Maia-3's predicted outcome appears after its first move";
+    els.outcomeTip.innerHTML = `<strong>No estimate yet</strong>Appears after Maia-3's first move. ${note}`;
+    els.outcome.setAttribute("aria-label", "Outcome bar: no estimate yet");
     return;
   }
   const v = d.analysis.value;
@@ -379,10 +381,11 @@ function renderOutcome(): void {
   const white = oppIsWhite ? v.win + v.draw / 2 : v.loss + v.draw / 2;
   const pct = Math.round(white * 100);
   els.outcomeFill.style.height = `${pct}%`;
-  els.outcomeLabel.textContent = String(pct);
-  const label = `Maia-3 predicts White scores ${pct}% from here, for players at these ratings (not an engine evaluation)`;
-  els.outcome.setAttribute("aria-label", label);
-  els.outcome.title = label;
+  els.outcomeLabel.textContent = `${pct}%`;
+  const o = match.options;
+  const [w, b] = o.humanColor === "w" ? [o.humanElo, o.targetElo] : [o.targetElo, o.humanElo];
+  els.outcomeTip.innerHTML = `<strong>${pct}% White</strong>${note} Maia-3's predicted score for a ${w} (White) vs a ${b} (Black) from this position.`;
+  els.outcome.setAttribute("aria-label", `Outcome bar: ${pct}% White. ${note}`);
 }
 
 function renderStyleReport(): void {
@@ -537,6 +540,18 @@ els.copyPgn.addEventListener("click", async () => {
 els.downloadLog.addEventListener("click", () => {
   download(`stylemate-decisions-${stamp()}.jsonl`, match.decisionsJsonl(), "application/jsonl");
   toast("Decision log downloaded");
+});
+// Tap/click toggles the eval-bar note (hover alone doesn't exist on phones);
+// tapping anywhere else closes it.
+const boardWrap = els.outcome.parentElement!;
+els.outcome.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = boardWrap.classList.toggle("tip-open");
+  els.outcome.setAttribute("aria-expanded", String(open));
+});
+document.addEventListener("click", () => {
+  boardWrap.classList.remove("tip-open");
+  els.outcome.setAttribute("aria-expanded", "false");
 });
 els.aboutBtn.addEventListener("click", () => els.about.showModal());
 
