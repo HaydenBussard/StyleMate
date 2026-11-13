@@ -160,7 +160,7 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
 .promo-options { display: flex; gap: 8px; margin-bottom: 14px; }
 .promo-options button { width: 64px; height: 64px; font-size: 44px; line-height: 1; border-radius: 8px; border: 1px solid var(--border); background: var(--sq-light); cursor: pointer; pointer-events: auto; }
 .promo-options button:hover { background: #f3e8d0; }
-.about { max-width: 560px; }
+.about { max-width: 600px; max-height: min(85vh, 900px); overflow-y: auto; }
 .about h2 { font-family: var(--font-display); font-size: 24px; color: var(--text); text-transform: none; letter-spacing: 0; }
 .about p { color: var(--muted); margin: 0 0 12px; }
 .about strong { color: var(--text); }
@@ -207,3 +207,13 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
 .outcome-tip strong { display: block; margin-bottom: 2px; }
 .board-wrap.tip-open .outcome-tip { opacity: 1; visibility: visible; }
 @media (hover: hover) { .outcome:hover + .outcome-tip { opacity: 1; visibility: visible; } }
+
+/* Guide inside the "How it works" dialog */
+.about h3 { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text); }
+.guide { margin: 0 0 12px; }
+.guide dt { font-weight: 600; color: var(--text); margin-top: 10px; }
+.guide dd { margin: 2px 0 0; color: var(--muted); line-height: 1.5; }
+.guide-link { float: right; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+.report-help { margin-top: 10px; font-size: 13px; }
+.report-help summary { cursor: pointer; color: var(--accent); font-weight: 500; }
+.report-help .guide dd { font-size: 13px; }
