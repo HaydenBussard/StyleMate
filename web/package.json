@@ -1,0 +1,32 @@
+{
+  "name": "chess-human-web",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "fetch-model": "node scripts/fetch-model.mjs",
+    "eval:styles": "tsx scripts/eval-styles.ts",
+    "prebuild": "node scripts/fetch-model.mjs",
+    "predev": "node scripts/fetch-model.mjs",
+    "release": "node scripts/make-source-zip.mjs && npm run build"
+  },
+  "author": "",
+  "license": "AGPL-3.0-or-later",
+  "description": "Human-like chess opponent web app (milestone 1: playable prototype)",
+  "dependencies": {
+    "chess.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^4.1.12"
+  },
+  "private": true,
+  "type": "module"
+}
