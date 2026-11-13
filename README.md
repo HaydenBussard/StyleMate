@@ -63,5 +63,7 @@ your own games, and learned (instead of hand-set) style weights.
 
 ## License
 
+Copyright (C) 2026 Hayden Bussard.
+
 AGPL-3.0-or-later. Maia-3 © CSSLab, University of Toronto (AGPL-3.0);
 TypeScript port maia3-ts (AGPL-3.0); chess.js (BSD-2-Clause).
