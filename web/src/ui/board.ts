@@ -252,7 +252,7 @@ export class BoardView {
         if (this.drag?.ghost && this.drag.from === sq) btn.classList.add("drag-origin");
         const target = this.targets.find((m) => m.to === sq);
         if (target) btn.classList.add(target.captured ? "capture" : "target");
-        if (st.inCheck && piece?.type === "k" && piece.color === st.turn) btn.classList.add("check");
+        if (st.inCheck && piece?.type === "k" && piece.color === st.turn) btn.classList.add("in-check");
 
         btn.setAttribute(
           "aria-label",
