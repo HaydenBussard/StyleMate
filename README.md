@@ -14,8 +14,9 @@ server, no API keys, $0 compute.
 - Live **style report**: what the opponent played vs what pure Maia would have,
   per feature, plus the human-likeness cost (KL divergence)
 - Opponent's top candidate moves with probabilities, and Maia's predicted
-  outcome bar
-- Drag-and-drop or click-to-move, legal-move highlighting, promotion picker
+  outcome bar (can be hidden)
+- Drag-and-drop or click-to-move, legal-move highlighting, promotion picker;
+  right-click or Escape cancels a drag
 - Optional chess clock (blitz, rapid, classical, with increment) or no clock
 - Take-back (untimed games), resign, flip
 - Export PGN (with model/rating/style headers) and a JSONL decision log

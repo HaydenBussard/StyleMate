@@ -60,6 +60,14 @@ piece. A press that moves under 5 px is treated as a click, so taps still
 select. Pointer capture starts only once a real drag begins; capturing on
 press would retarget the tap's click event and break click-to-move.
 
+Right-click (or Escape) mid-drag cancels, as on Lichess and Chess.com. The
+subtle part: pressing a second mouse button while the first is held is a
+"chorded" press, which Pointer Events report as a `pointermove` with a new
+`buttons` bitmask, not a `pointerdown`. So the cancel is detected in
+`pointermove` (plus a `mousedown` fallback). The context menu is suppressed
+only for that press, and the click fired by the later left-button release
+is swallowed so it cannot re-select the piece.
+
 ### 11. Tests at three levels
 Rules + PGN round-trip (`game.test.ts`); clock and timeouts with an injected
 time source (`clock.test.ts`); opponents and game loop with fakes
@@ -77,6 +85,13 @@ cannot possibly mate (then it's a draw), and take-back is disabled in timed
 games. The PGN gets a standard `TimeControl` tag such as `180+2`.
 Maia-3 has no notion of time, so it doesn't speed up or blunder under time
 pressure; that's stated in the app's "How it works" dialog.
+
+### 14. The eval bar is a display preference, not a game setting
+Hiding the outcome bar applies immediately and never restarts the game,
+unlike opponent settings, because it changes nothing in the game record. It
+is a CSS class on the board column (`.no-eval`), so the bar's data keeps
+updating while hidden and reappears in sync. The setting persists with the
+others in localStorage.
 
 ### 13. Two fixes for sandboxed hosts
 Preview hosts can serve the page with an opaque (`null`) origin. There,

@@ -10,6 +10,13 @@
  * A press that moves less than DRAG_THRESHOLD_PX is treated as a click, so a
  * slightly shaky tap still selects instead of starting a drag.
  *
+ * Cancelling a drag: like Lichess and Chess.com, pressing the right mouse
+ * button (or Escape) mid-drag sends the piece home and clears the selection.
+ * A right press while the left is held arrives as a pointermove with a new
+ * `buttons` bitmask, not a pointerdown, so both are checked. The browser's
+ * context menu is suppressed for that press only, and the click that follows
+ * the eventual left-button release is swallowed so it can't re-select.
+ *
  * Squares are real buttons so the board is keyboard- and screen-reader
  * accessible without extra work.
  */
@@ -43,6 +50,10 @@ export class BoardView {
   private drag: DragState | null = null;
   /** Set after a drag ends so the browser's trailing click doesn't re-handle the same input. */
   private suppressClick = false;
+  /** Pointer whose drag was cancelled; its eventual release must be ignored. */
+  private cancelledPointer: number | null = null;
+  /** True between a cancel and the context-menu event the right press produces. */
+  private blockContextMenu = false;
   flipped = false;
 
   constructor(
@@ -62,6 +73,20 @@ export class BoardView {
     root.addEventListener("pointermove", (e) => this.onPointerMove(e));
     root.addEventListener("pointerup", (e) => this.onPointerUp(e));
     root.addEventListener("pointercancel", () => this.cancelDrag());
+    // Right-click mid-drag cancels. mousedown covers browsers that don't report the chord as pointermove.
+    window.addEventListener("mousedown", (e) => {
+      if (e.button === 2 && this.drag) this.userCancel(e);
+    });
+    window.addEventListener("pointerup", (e) => this.onCancelledRelease(e));
+    window.addEventListener("contextmenu", (e) => {
+      if (this.drag || this.blockContextMenu) {
+        e.preventDefault();
+        this.blockContextMenu = false;
+      }
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.drag) this.userCancel(e);
+    });
     // Stop the browser's native drag of the glyph text.
     root.addEventListener("dragstart", (e) => e.preventDefault());
   }
@@ -75,6 +100,10 @@ export class BoardView {
   // ---- Drag-and-drop ---------------------------------------------------------
 
   private onPointerDown(e: PointerEvent): void {
+    if (this.drag && e.button === 2) {
+      this.userCancel(e);
+      return;
+    }
     if (e.button !== 0 || !this.cb.canInteract()) return;
     const sq = squareAt(e.target);
     if (!sq) return;
@@ -86,6 +115,10 @@ export class BoardView {
   private onPointerMove(e: PointerEvent): void {
     const d = this.drag;
     if (!d || e.pointerId !== d.pointerId) return;
+    if (e.pointerType === "mouse" && e.buttons & 2) {
+      this.userCancel(e);
+      return;
+    }
     if (!d.ghost) {
       if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_THRESHOLD_PX) return;
       this.startDrag(d);
@@ -115,6 +148,28 @@ export class BoardView {
     }
     // Dropped off-target: keep the piece selected so click-to-move still works.
     this.render();
+  }
+
+  /** Abort the current drag at the user's request: piece goes back, nothing stays selected. */
+  private userCancel(e: Event): void {
+    const d = this.drag;
+    if (!d) return;
+    e.preventDefault();
+    this.cancelledPointer = d.pointerId;
+    this.blockContextMenu = true;
+    this.selected = null;
+    this.targets = [];
+    this.cancelDrag();
+    this.render();
+  }
+
+  private onCancelledRelease(e: PointerEvent): void {
+    if (this.cancelledPointer === null || e.pointerId !== this.cancelledPointer) return;
+    // Wait for the left button: releasing only the right button keeps the left one down.
+    if (e.buttons & 1) return;
+    this.cancelledPointer = null;
+    this.suppressClick = true;
+    setTimeout(() => (this.suppressClick = false), 0);
   }
 
   private startDrag(d: DragState): void {

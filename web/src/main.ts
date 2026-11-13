@@ -48,6 +48,8 @@ const els = {
   opponentBadge: $("opponent-badge"),
   youMeta: $("you-meta"),
   outcome: $("outcome"),
+  showEval: $<HTMLInputElement>("show-eval"),
+  play: document.querySelector<HTMLElement>(".play")!,
   outcomeFill: $("outcome-fill"),
   outcomeLabel: $("outcome-label"),
   overlay: $("model-overlay"),
@@ -383,7 +385,10 @@ const LEGACY_SETTINGS_KEY = "human-chess:settings:v1";
 const SETTING_IDS = ["engine", "color", "elo", "style", "strength", "human-elo", "time-control"] as const;
 function saveSettings(): void {
   try {
-    const data = Object.fromEntries(SETTING_IDS.map((id) => [id, ($(id) as HTMLInputElement).value]));
+    const data: Record<string, string | boolean> = Object.fromEntries(
+      SETTING_IDS.map((id) => [id, ($(id) as HTMLInputElement).value]),
+    );
+    data.showEval = els.showEval.checked;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   } catch {
     /* storage unavailable (private mode / sandboxed preview) — settings just won't persist */
@@ -391,8 +396,9 @@ function saveSettings(): void {
 }
 function loadSettings(): void {
   try {
-    const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY) ?? "{}") as Record<string, string>;
-    for (const id of SETTING_IDS) if (data[id] != null) ($(id) as HTMLInputElement).value = data[id];
+    const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY) ?? "{}") as Record<string, unknown>;
+    for (const id of SETTING_IDS) if (typeof data[id] === "string") ($(id) as HTMLInputElement).value = data[id];
+    if (typeof data.showEval === "boolean") els.showEval.checked = data.showEval;
   } catch {
     /* ignore */
   }
@@ -421,6 +427,14 @@ for (const el of [els.engine, els.color, els.elo, els.style, els.strength, els.h
     else toast("Settings saved — they apply to your next game");
   });
 }
+/** Display-only preference: unlike opponent settings it never touches the game, so it applies immediately. */
+function syncEvalVisibility(): void {
+  els.play.classList.toggle("no-eval", !els.showEval.checked);
+}
+els.showEval.addEventListener("change", () => {
+  syncEvalVisibility();
+  saveSettings();
+});
 els.flip.addEventListener("click", () => {
   view.flipped = !view.flipped;
   render();
@@ -456,6 +470,7 @@ els.aboutBtn.addEventListener("click", () => els.about.showModal());
 
 loadSettings();
 syncLabels();
+syncEvalVisibility();
 startGame();
 
 // Handy for debugging from the browser console.
