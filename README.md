@@ -51,6 +51,13 @@ tests/                pytest suite
 pip install -e ".[dev]" && pytest
 ```
 
+To have `inventory` and `manifest` recognise your own games, list your player
+names (comma-separated) in an environment variable instead of the code:
+
+```bash
+export CHESS_HUMAN_AI_PLAYERS="yourLichessName,Your Name"
+```
+
 Planned: Stockfish move-quality labelling of PGNs, player style profiles from
 your own games, and learned (instead of hand-set) style weights.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import chess.pgn
 
-from chess_human_ai.services.pgn_inventory import is_hayden
+from chess_human_ai.services.pgn_inventory import is_player
 
 
 @dataclass(frozen=True)
@@ -76,8 +76,8 @@ def create_manifest(pgn_path: Path, output_path: Path) -> int:
 
             white = headers.get("White", "")
             black = headers.get("Black", "")
-            played_white = is_hayden(white)
-            played_black = is_hayden(black)
+            played_white = is_player(white)
+            played_black = is_player(black)
 
             if not played_white and not played_black:
                 continue

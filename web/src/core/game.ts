@@ -197,7 +197,7 @@ export class GameSession {
     const date = `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
     const headers: Record<string, string> = {
       Event: "Casual game",
-      Site: "StyleMate (https://github.com/HaydenBussard/chess-human-ai)",
+      Site: "StyleMate",
       Date: date,
       Round: "-",
       White: this.players.white,
