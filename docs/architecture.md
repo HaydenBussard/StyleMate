@@ -6,7 +6,7 @@ Analyze human chess games and play human-like, rating- and style-conditioned
 opponents. The repo has two parts:
 
 ```text
-web/                  Human Chess web app (TypeScript) — playable product
+web/                  StyleMate web app (TypeScript) — playable product
 src/chess_human_ai/   Python data tools (PGN inventory/manifest) — analysis pipeline
 docs/                 Research, architecture, decisions, evaluation results
 ```

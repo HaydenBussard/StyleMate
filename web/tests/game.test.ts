@@ -85,7 +85,8 @@ describe("PGN export", () => {
     ["f2f3", "e7e5", "g2g4", "d8h4"].forEach((m) => g.play(m));
     const pgn = g.toPgn();
     expect(pgn).toContain('[Result "0-1"]');
-    expect(pgn).toContain('[Termination "checkmate"]');
+    expect(pgn).toContain('[Termination "normal"]');
+    expect(pgn).toContain('[TerminationDetail "checkmate"]');
     expect(pgn.trim().endsWith("0-1")).toBe(true);
   });
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { sha256Hex, sha256HexJs } from "./sha256";
+import { sha256Hex, sha256HexJs } from "../src/core/sha256";
 
 const ref = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 

@@ -5,6 +5,7 @@
 import type { Square } from "chess.js";
 import "./styles.css";
 import type { Color, PromotionPiece } from "./core/game";
+import { findTimeControl, formatClock, TIME_CONTROLS } from "./core/clock";
 import { Match } from "./core/match";
 import { Maia3Opponent } from "./opponents/maia3";
 import { WorkerMaiaBackend, type LoadState } from "./opponents/maia-worker-backend";
@@ -53,7 +54,16 @@ const els = {
   modelProgress: $("model-progress"),
   modelSub: $("model-sub"),
   styleReport: $("style-report"),
+  timeControl: $<HTMLSelectElement>("time-control"),
+  clockTop: $("clock-top"),
+  clockBottom: $("clock-bottom"),
 };
+
+// Populate the clock options from the single source of truth in core/clock.ts.
+els.timeControl.replaceChildren(
+  new Option("No clock", "none"),
+  ...TIME_CONTROLS.map((t) => new Option(t.label, t.id)),
+);
 
 // ---- Opponent registry -------------------------------------------------------
 // The Maia worker is created once and shared by every game.
@@ -62,21 +72,25 @@ let maiaState: LoadState = { state: "idle" };
 
 function onMaiaState(s: LoadState): void {
   maiaState = s;
+  syncOverlay();
   if (s.state === "loading") {
-    els.overlay.hidden = false;
     const pct = s.total ? Math.min(100, (s.received / s.total) * 100) : 0;
     els.modelProgress.style.width = `${pct.toFixed(0)}%`;
     els.modelSub.textContent = `${(s.received / 1e6).toFixed(1)} of ${(s.total / 1e6).toFixed(1)} MB · downloaded once, then cached`;
   } else if (s.state === "ready") {
-    els.overlay.hidden = true;
     render();
     void maybeOpponentMove();
   } else if (s.state === "error") {
-    els.overlay.hidden = true;
     toast(`Maia-3 failed to load (${s.message}). Switched to the placeholder bot.`);
     els.engine.value = "placeholder";
     startGame();
   }
+}
+
+/** The loading overlay covers the board only while the current opponent is a Maia that isn't ready. */
+function syncOverlay(): void {
+  const usingMaia = typeof match !== "undefined" && match.options.opponent instanceof Maia3Opponent;
+  els.overlay.hidden = !(usingMaia && maiaState.state === "loading");
 }
 
 function createOpponent(kind: string): Opponent {
@@ -104,6 +118,7 @@ function newMatch(): Match {
     targetElo: Number(els.elo.value),
     humanElo: clampNum(Number(els.humanElo.value) || 1500, 400, 3000),
     style: { id: styleId, strength },
+    timeControl: findTimeControl(els.timeControl.value),
   });
 }
 
@@ -113,7 +128,48 @@ function startGame(): void {
   view.flipped = match.options.humanColor === "b";
   saveSettings();
   render();
+  startTicker();
   void maybeOpponentMove();
+}
+
+// ---- Clock -------------------------------------------------------------------
+// The clock logic lives in core/clock.ts; this only repaints it and checks for
+// a flag. 100 ms is enough to show tenths of a second under ten seconds.
+let ticker: number | undefined;
+function startTicker(): void {
+  clearInterval(ticker);
+  if (!match.clock) return;
+  ticker = window.setInterval(() => {
+    if (match.checkFlag()) {
+      clearInterval(ticker);
+      render();
+      return;
+    }
+    renderClocks();
+  }, 100);
+}
+
+function renderClocks(): void {
+  const clock = match.clock;
+  els.clockTop.hidden = els.clockBottom.hidden = !clock;
+  if (!clock) return;
+  const now = performance.now();
+  const st = match.session.status();
+  const human = match.options.humanColor;
+  // The bottom strip is whoever sits at the bottom of the board.
+  const bottomColor = view.flipped ? "b" : "w";
+  const pairs: [HTMLElement, typeof human][] = [
+    [els.clockBottom, bottomColor],
+    [els.clockTop, bottomColor === "w" ? "b" : "w"],
+  ];
+  for (const [el, color] of pairs) {
+    const ms = clock.remaining(color, now);
+    el.textContent = formatClock(ms);
+    el.classList.toggle("running", clock.runningColor === color && !st.over);
+    el.classList.toggle("low", clock.runningColor === color && !st.over && ms < 20_000);
+    el.classList.toggle("flagged", st.over && st.reason?.startsWith("timeout") === true && st.turn === color);
+    el.setAttribute("aria-label", `${color === human ? "Your" : "Opponent's"} clock: ${formatClock(ms)}`);
+  }
 }
 
 async function handleHumanMove(from: Square, to: Square): Promise<void> {
@@ -180,6 +236,7 @@ function askPromotion(color: Color): Promise<PromotionPiece | undefined> {
 
 // ---- Rendering ---------------------------------------------------------------
 function render(): void {
+  syncOverlay();
   view.render();
   const s = match.session;
   const st = s.status();
@@ -197,7 +254,7 @@ function render(): void {
 
   if (st.over) {
     const winner = st.result === "1/2-1/2" ? "Draw" : st.result === "1-0" ? "White wins" : "Black wins";
-    els.status.textContent = `${winner} · ${st.reason}`;
+    els.status.textContent = `${winner} · ${st.reason === "timeout" ? "on time" : st.reason}`;
   } else if (!match.isHumanTurn) {
     els.status.textContent = maiaState.state === "loading" && info.humanLike ? "Loading model…" : "Opponent is thinking…";
   } else {
@@ -217,7 +274,9 @@ function render(): void {
   renderOutcome();
   renderStyleReport();
 
-  els.takeBack.disabled = match.isOpponentThinking || s.historyUci.length === 0;
+  els.takeBack.disabled = !match.canTakeBack;
+  els.takeBack.title = match.clock ? "Take-back is off in timed games" : "";
+  renderClocks();
   els.resign.disabled = st.over || s.historyUci.length === 0;
   els.downloadLog.disabled = match.decisions.length === 0;
   els.pgnPreview.value = s.toPgn();
@@ -319,8 +378,9 @@ function toast(msg: string): void {
   toastTimer = window.setTimeout(() => els.toast.classList.remove("show"), 2600);
 }
 
-const SETTINGS_KEY = "human-chess:settings:v1";
-const SETTING_IDS = ["engine", "color", "elo", "style", "strength", "human-elo"] as const;
+const SETTINGS_KEY = "stylemate:settings:v1";
+const LEGACY_SETTINGS_KEY = "human-chess:settings:v1";
+const SETTING_IDS = ["engine", "color", "elo", "style", "strength", "human-elo", "time-control"] as const;
 function saveSettings(): void {
   try {
     const data = Object.fromEntries(SETTING_IDS.map((id) => [id, ($(id) as HTMLInputElement).value]));
@@ -331,7 +391,7 @@ function saveSettings(): void {
 }
 function loadSettings(): void {
   try {
-    const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Record<string, string>;
+    const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY) ?? "{}") as Record<string, string>;
     for (const id of SETTING_IDS) if (data[id] != null) ($(id) as HTMLInputElement).value = data[id];
   } catch {
     /* ignore */
@@ -352,7 +412,7 @@ function syncLabels(): void {
 els.newGame.addEventListener("click", startGame);
 for (const el of [els.elo, els.strength]) el.addEventListener("input", syncLabels);
 for (const el of [els.engine, els.style]) el.addEventListener("change", syncLabels);
-for (const el of [els.engine, els.color, els.elo, els.style, els.strength, els.humanElo]) {
+for (const el of [els.engine, els.color, els.elo, els.style, els.strength, els.humanElo, els.timeControl]) {
   el.addEventListener("change", () => {
     saveSettings();
     // Changing settings mid-game would invalidate the game record; apply them to a fresh game
@@ -372,11 +432,11 @@ els.takeBack.addEventListener("click", () => {
   void maybeOpponentMove();
 });
 els.resign.addEventListener("click", () => {
-  match.session.resign(match.options.humanColor);
+  match.resign();
   render();
 });
 els.downloadPgn.addEventListener("click", () => {
-  download(`human-chess-${stamp()}.pgn`, match.session.toPgn(), "application/x-chess-pgn");
+  download(`stylemate-${stamp()}.pgn`, match.session.toPgn(), "application/x-chess-pgn");
   toast("PGN downloaded");
 });
 els.copyPgn.addEventListener("click", async () => {
@@ -389,7 +449,7 @@ els.copyPgn.addEventListener("click", async () => {
   }
 });
 els.downloadLog.addEventListener("click", () => {
-  download(`human-chess-decisions-${stamp()}.jsonl`, match.decisionsJsonl(), "application/jsonl");
+  download(`stylemate-decisions-${stamp()}.jsonl`, match.decisionsJsonl(), "application/jsonl");
   toast("Decision log downloaded");
 });
 els.aboutBtn.addEventListener("click", () => els.about.showModal());
