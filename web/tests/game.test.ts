@@ -63,12 +63,12 @@ describe("GameSession rules", () => {
 
 describe("PGN export", () => {
   it("produces PGN that round-trips through a PGN parser with the same moves", () => {
-    const g = new GameSession({ white: "Hayden", black: "Bot" }, { OpponentModel: "test@1" });
+    const g = new GameSession({ white: "Player", black: "Bot" }, { OpponentModel: "test@1" });
     const moves = ["e2e4", "c7c5", "g1f3", "d7d6", "d2d4", "c5d4", "f3d4", "g8f6"];
     moves.forEach((m) => g.play(m));
     const pgn = g.toPgn();
 
-    expect(pgn).toContain('[White "Hayden"]');
+    expect(pgn).toContain('[White "Player"]');
     expect(pgn).toContain('[Black "Bot"]');
     expect(pgn).toContain('[Result "*"]');
     expect(pgn).toContain('[OpponentModel "test@1"]');
