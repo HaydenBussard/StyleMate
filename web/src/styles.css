@@ -1,4 +1,4 @@
-/* Human Chess — "club analysis room": espresso surfaces, walnut board, amber accent. */
+/* StyleMate — "club analysis room": espresso surfaces, walnut board, amber accent. */
 :root {
   --bg: #15130f;
   --surface: #1d1a15;
@@ -47,12 +47,18 @@ code, .mono { font-family: var(--font-mono); font-size: 13px; }
 .player-name { font-weight: 700; font-size: 16px; }
 .player-meta { color: var(--muted); font-size: 13px; }
 .status { color: var(--text); font-size: 14px; text-align: right; }
+.strip-right { display: flex; align-items: center; gap: 12px; }
+.clock { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 500; min-width: 92px; text-align: center; padding: 4px 12px; border-radius: 8px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.clock.running { background: var(--text); color: var(--bg); border-color: var(--text); }
+.clock.low { color: #fff; background: var(--danger); border-color: var(--danger); }
+.clock[hidden] { display: none; }
+.clock.flagged { color: var(--danger); border-color: var(--danger); background: transparent; }
 .badge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); white-space: nowrap; }
 .badge.placeholder { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
 
 /* Board */
 .board-wrap { position: relative; display: flex; gap: 10px; }
-.board { display: grid; grid-template-columns: repeat(8, 1fr); width: var(--board); aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / 0.45), 0 0 0 1px #00000060; user-select: none; touch-action: manipulation; }
+.board { display: grid; grid-template-columns: repeat(8, 1fr); width: var(--board); aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / 0.45), 0 0 0 1px #00000060; user-select: none; touch-action: none; }
 .sq { position: relative; border: 0; padding: 0; margin: 0; display: grid; place-items: center; cursor: pointer; aspect-ratio: 1; }
 .sq.light { background: var(--sq-light); }
 .sq.dark { background: var(--sq-dark); }
@@ -62,6 +68,10 @@ code, .mono { font-family: var(--font-mono); font-size: 13px; }
 .sq.target::after { content: ""; width: 28%; height: 28%; border-radius: 50%; background: rgb(30 40 30 / 0.32); }
 .sq.capture::after { content: ""; position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgb(30 40 30 / 0.32); }
 .sq.check { background: radial-gradient(circle, #e2523a 0%, #e2523a99 40%, transparent 75%) !important; }
+.sq.drag-origin .piece { opacity: 0.3; }
+.sq.drag-over { box-shadow: inset 0 0 0 4px rgb(255 255 255 / 0.55); }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 50; display: grid; place-items: center; pointer-events: none; cursor: grabbing; filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.4)); }
+.sq:has(.piece) { cursor: grab; }
 .sq:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; z-index: 1; }
 .piece { font-size: calc(var(--board) / 8 * 0.78); line-height: 1; pointer-events: none; font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols 2", "Apple Symbols", serif; }
 .piece.white { color: #fbf8f1; -webkit-text-stroke: 1.2px #2a241b; text-shadow: 0 2px 2px rgb(0 0 0 / 0.25); }
@@ -166,5 +176,11 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
   .field-row { flex-direction: column; gap: 0; }
   .player-strip, .board-actions { padding-left: 34px; }
   .status { font-size: 13px; }
+}
+@media (max-width: 560px) {
+  .player-strip > div:first-child { min-width: 0; }
+  .strip-right { flex-direction: column; align-items: flex-end; gap: 4px; }
+  .clock { font-size: 18px; min-width: 76px; padding: 3px 8px; }
+  .badge { font-size: 11px; padding: 3px 8px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

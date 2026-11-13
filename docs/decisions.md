@@ -52,11 +52,35 @@ Vanilla TypeScript + Vite: ~1k lines of app code, no React/state library.
 Each module is readable on its own. Revisit if the UI grows (accounts, history,
 analysis board).
 
-### 10. Squares are `<button>`s; click-to-move
-Keyboard and screen-reader accessible for free. Drag-and-drop is a later
-enhancement.
+### 10. Squares are `<button>`s; click-to-move and drag-and-drop
+Keyboard and screen-reader accessible for free. Drag-and-drop uses Pointer
+Events (one code path for mouse, touch and pen) rather than the HTML5 drag
+API, which does not work on touch screens and cannot style the dragged
+piece. A press that moves under 5 px is treated as a click, so taps still
+select. Pointer capture starts only once a real drag begins; capturing on
+press would retarget the tap's click event and break click-to-move.
 
 ### 11. Tests at three levels
-Rules + PGN round-trip (`game.test.ts`); opponents and game loop with fakes
+Rules + PGN round-trip (`game.test.ts`); clock and timeouts with an injected
+time source (`clock.test.ts`); opponents and game loop with fakes
 (`opponent.test.ts`, `style.test.ts`); real-weights integration
 (`maia3-model.test.ts`, skipped if weights absent). CI runs all of them.
+
+### 12. The clock is pure logic with an injected time source
+`core/clock.ts` never reads the time itself: every method takes `now`. The
+`Match` gets a `now()` function (default `performance.now`), and tests pass a
+fake one, so a five-minute game is tested in microseconds with exact
+numbers. The UI only repaints every 100 ms and asks `match.checkFlag()`.
+Rules follow common online play: White's first move is free, Fischer
+increment is added after each move, a flag loses unless the other side
+cannot possibly mate (then it's a draw), and take-back is disabled in timed
+games. The PGN gets a standard `TimeControl` tag such as `180+2`.
+Maia-3 has no notion of time, so it doesn't speed up or blunder under time
+pressure; that's stated in the app's "How it works" dialog.
+
+### 13. Two fixes for sandboxed hosts
+Preview hosts can serve the page with an opaque (`null`) origin. There,
+`new Worker(url)` is refused, so the worker bundle is fetched and started
+from a Blob URL. That worker isn't a secure context, so `crypto.subtle` is
+missing; `core/sha256.ts` falls back to a tested pure-JS SHA-256 (about
+200 ms for the 20 MB weights).

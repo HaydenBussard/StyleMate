@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Human Chess — play a human-like Maia-3 opponent</title>
-    <meta name="description" content="Play chess against Maia-3, a model of how humans at a chosen rating actually play, with selectable, measurable playstyles." />
+    <title>StyleMate — a human-like chess opponent with a playstyle you can measure</title>
+    <meta name="description" content="StyleMate: play chess against Maia-3, a model of how humans at a chosen rating actually play, with selectable playstyles whose effect is measured every game." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2315130f'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23d9a441'%3E%E2%99%9E%3C/text%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@700&display=swap" rel="stylesheet" />
@@ -16,8 +16,8 @@
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">♞&#xFE0E;</span>
-        <span class="brand-name">Human Chess</span>
-        <span class="brand-tag">human-like opponents, measured</span>
+        <span class="brand-name">StyleMate</span>
+        <span class="brand-tag">human-like chess, with a style you can measure</span>
       </div>
       <nav class="topnav">
         <button type="button" id="about-btn" class="link-btn">How it works</button>
@@ -32,7 +32,10 @@
             <div class="player-name" id="opponent-name">Maia-3</div>
             <div class="player-meta" id="opponent-meta">—</div>
           </div>
-          <span class="badge" id="opponent-badge">—</span>
+          <div class="strip-right">
+            <span class="badge" id="opponent-badge">—</span>
+            <div class="clock" id="clock-top" hidden>0:00</div>
+          </div>
         </div>
 
         <div class="board-wrap">
@@ -55,7 +58,10 @@
             <div class="player-name">You</div>
             <div class="player-meta" id="you-meta">—</div>
           </div>
-          <div class="status" id="status" role="status" aria-live="polite">—</div>
+          <div class="strip-right">
+            <div class="status" id="status" role="status" aria-live="polite">—</div>
+            <div class="clock" id="clock-bottom" hidden>0:00</div>
+          </div>
         </div>
 
         <div class="board-actions">
@@ -110,7 +116,11 @@
               <input id="human-elo" type="number" min="400" max="3000" step="50" value="1500" inputmode="numeric" />
             </div>
           </div>
-          <p class="hint">Settings apply when you start a new game.</p>
+          <div class="field">
+            <label for="time-control">Clock</label>
+            <select id="time-control"></select>
+          </div>
+          <p class="hint">Settings apply when you start a new game. Timed games disable take-back.</p>
         </section>
 
         <section class="card">
@@ -152,7 +162,7 @@
       <p><strong>Maia-3</strong> is a neural network from the University of Toronto's CSSLab trained to predict the move a human at a given rating would play — not the best move. This app runs its 5M-parameter version entirely in your browser, so there is no server.</p>
       <p>Each turn the model returns a probability for every legal move. The opponent samples from that distribution, so it makes the mistakes players at that rating make, in roughly the proportions they make them.</p>
       <p><strong>Playstyles</strong> tilt Maia's probabilities toward measurable move features (checks, captures, advancing, safety, castling). The style report compares what the opponent actually played with what plain Maia would have done in the same positions, and shows the cost in human-likeness (KL divergence).</p>
-      <p><strong>Limits:</strong> style weights are hand-tuned, not learned from real players; the rating slider sets Maia's conditioning, it is not a calibrated playing strength; there is no clock.</p>
+      <p><strong>Limits:</strong> style weights are hand-tuned, not learned from real players; the rating slider sets Maia's conditioning, it is not a calibrated playing strength; the clock is for you — Maia-3 was not trained on clock times, so it does not play faster or worse under time pressure the way humans do.</p>
       <p class="hint">Maia-3 © CSSLab, AGPL-3.0 · TypeScript port: maia3-ts (AGPL-3.0) · Rules: chess.js (BSD-2). This app is AGPL-3.0; download the full source from the header link.</p>
       <form method="dialog"><button class="btn primary">Close</button></form>
     </dialog>

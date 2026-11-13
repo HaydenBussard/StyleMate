@@ -2,7 +2,7 @@
 
 Tools for analyzing, modeling and playing against human-like chess decisions.
 
-**Human Chess** (`web/`) is a browser app where you play Maia-3 — a neural
+**StyleMate** (`web/`) is a browser app where you play Maia-3 — a neural
 network trained to predict the move a human at a chosen rating would play —
 with selectable, *measured* playstyles. It runs entirely client-side: no
 server, no API keys, $0 compute.
@@ -15,7 +15,9 @@ server, no API keys, $0 compute.
   per feature, plus the human-likeness cost (KL divergence)
 - Opponent's top candidate moves with probabilities, and Maia's predicted
   outcome bar
-- Legal-move highlighting, promotion picker, take-back, resign, flip
+- Drag-and-drop or click-to-move, legal-move highlighting, promotion picker
+- Optional chess clock (blitz, rapid, classical, with increment) or no clock
+- Take-back (untimed games), resign, flip
 - Export PGN (with model/rating/style headers) and a JSONL decision log
 - Clearly labelled placeholder bot as fallback
 
@@ -25,7 +27,7 @@ server, no API keys, $0 compute.
 cd web
 npm ci
 npm run dev          # downloads + verifies the 20 MB Maia-3 weights on first run
-npm test             # 35 tests, including real-model integration tests
+npm test             # 48 tests, including real-model integration tests
 npm run eval:styles  # regenerates docs/style-eval.md
 npm run release      # source.zip + production build in web/dist
 ```

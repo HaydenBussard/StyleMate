@@ -25,6 +25,8 @@ export interface GameStatus {
     | "threefold repetition"
     | "fifty-move rule"
     | "resignation"
+    | "timeout"
+    | "timeout vs insufficient material"
     | null;
   inCheck: boolean;
   turn: Color;
@@ -53,6 +55,7 @@ export function parseUci(uci: UciMove): { from: Square; to: Square; promotion?: 
 export class GameSession {
   private chess: Chess;
   private resignedBy: Color | null = null;
+  private flaggedBy: Color | null = null;
   private readonly startedAt: Date;
 
   constructor(
@@ -126,6 +129,7 @@ export class GameSession {
   undo(plies = 1): number {
     let n = 0;
     this.resignedBy = null;
+    this.flaggedBy = null;
     while (n < plies && this.chess.undo()) n++;
     return n;
   }
@@ -134,9 +138,34 @@ export class GameSession {
     if (!this.status().over) this.resignedBy = color;
   }
 
+  /**
+   * `color` ran out of time. Under FIDE/USCF-style rules they lose, unless the
+   * other side cannot possibly checkmate, in which case it is a draw.
+   */
+  timeout(color: Color): void {
+    if (!this.status().over) this.flaggedBy = color;
+  }
+
+  /** True if `color` has only a king, or king plus a single bishop or knight. */
+  private cannotMate(color: Color): boolean {
+    const pieces = this.chess
+      .board()
+      .flat()
+      .filter((p) => p && p.color === color && p.type !== "k")
+      .map((p) => p!.type);
+    return pieces.length === 0 || (pieces.length === 1 && (pieces[0] === "b" || pieces[0] === "n"));
+  }
+
   status(): GameStatus {
     const c = this.chess;
     const base = { inCheck: c.inCheck(), turn: c.turn() };
+    if (this.flaggedBy) {
+      const winner: Color = this.flaggedBy === "w" ? "b" : "w";
+      if (this.cannotMate(winner)) {
+        return { ...base, over: true, result: "1/2-1/2", reason: "timeout vs insufficient material" };
+      }
+      return { ...base, over: true, result: winner === "w" ? "1-0" : "0-1", reason: "timeout" };
+    }
     if (this.resignedBy) {
       return { ...base, over: true, result: this.resignedBy === "w" ? "0-1" : "1-0", reason: "resignation" };
     }
@@ -168,7 +197,7 @@ export class GameSession {
     const date = `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
     const headers: Record<string, string> = {
       Event: "Casual game",
-      Site: "Human Chess (https://github.com/HaydenBussard/chess-human-ai)",
+      Site: "StyleMate (https://github.com/HaydenBussard/chess-human-ai)",
       Date: date,
       Round: "-",
       White: this.players.white,
@@ -180,7 +209,11 @@ export class GameSession {
       headers.SetUp = "1";
       headers.FEN = startFen;
     }
-    if (st.reason) headers.Termination = st.reason;
+    // PGN's Termination tag uses a small fixed vocabulary; keep the detailed reason too.
+    if (st.reason) {
+      headers.Termination = st.reason.startsWith("timeout") ? "time forfeit" : "normal";
+      headers.TerminationDetail = st.reason;
+    }
     for (const [k, v] of Object.entries(headers)) pgnChess.setHeader(k, v);
     for (const san of this.chess.history()) pgnChess.move(san);
 

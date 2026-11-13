@@ -8,6 +8,7 @@
  */
 import type { Square } from "chess.js";
 import { GameSession, type Color, type PromotionPiece } from "./game";
+import { ChessClock, type TimeControl } from "./clock";
 import type { Candidate, DecisionAnalysis, Opponent } from "../opponents/types";
 import { FEATURE_KEYS, type Features, type StyleId } from "../opponents/style";
 
@@ -47,14 +48,22 @@ export interface MatchOptions {
   humanElo: number;
   humanName?: string;
   style?: { id: StyleId; strength: number };
+  /** Omit or null for an untimed game. */
+  timeControl?: TimeControl | null;
+  /** Injectable time source (ms) so tests can drive the clock. */
+  now?: () => number;
 }
 
 export class Match {
   readonly session: GameSession;
   readonly decisions: DecisionRecord[] = [];
+  readonly clock: ChessClock | null;
   private thinking = false;
+  private readonly now: () => number;
 
   constructor(readonly options: MatchOptions) {
+    this.now = options.now ?? (() => performance.now());
+    this.clock = options.timeControl ? new ChessClock(options.timeControl) : null;
     const botName = `${options.opponent.info.name} (${options.targetElo})`;
     const human = options.humanName ?? "You";
     this.session = new GameSession(
@@ -64,6 +73,7 @@ export class Match {
         OpponentHumanLike: String(options.opponent.info.humanLike),
         OpponentTargetElo: String(options.targetElo),
         ...(options.style ? { OpponentStyle: `${options.style.id}@${options.style.strength}` } : {}),
+        TimeControl: this.clock ? this.clock.pgnTag : "-",
       },
     );
   }
@@ -77,8 +87,41 @@ export class Match {
   }
 
   humanMove(from: Square, to: Square, promotion?: PromotionPiece): boolean {
-    if (!this.isHumanTurn) return false;
-    return this.session.play({ from, to, promotion }) !== null;
+    if (!this.isHumanTurn || this.checkFlag()) return false;
+    const ply = this.session.historyUci.length;
+    if (this.session.play({ from, to, promotion }) === null) return false;
+    this.afterMove(this.options.humanColor, ply);
+    return true;
+  }
+
+  /** Whether take-back is allowed. Timed games disallow it, as rated play does. */
+  get canTakeBack(): boolean {
+    return !this.clock && !this.thinking && this.session.historyUci.length > 0;
+  }
+
+  /**
+   * Check whether the side to move has run out of time; if so, end the game.
+   * The UI calls this on every clock tick. Returns true if someone flagged.
+   */
+  checkFlag(): boolean {
+    if (!this.clock || this.session.status().over) return false;
+    const flagged = this.clock.flagged(this.now());
+    if (!flagged) return false;
+    this.session.timeout(flagged);
+    this.clock.stop(this.now());
+    return true;
+  }
+
+  /** End-of-game bookkeeping (resignation etc.) — freezes the clock. */
+  resign(): void {
+    this.session.resign(this.options.humanColor);
+    this.clock?.stop(this.now());
+  }
+
+  private afterMove(mover: Color, plyBefore: number): void {
+    if (!this.clock) return;
+    this.clock.onMove(mover, plyBefore, this.now());
+    if (this.session.status().over) this.clock.stop(this.now());
   }
 
   /** Ask the opponent for a move and apply it. Resolves to false if it was not the opponent's turn. */
@@ -96,9 +139,13 @@ export class Match {
         opponentElo: this.options.humanElo,
         style: this.options.style,
       });
+      // The opponent may have lost on time while thinking.
+      if (this.checkFlag()) return false;
+      const ply = s.historyUci.length;
       const played = s.play(decision.move);
       // Guardrail: a model must never be allowed to corrupt the game with an illegal move.
       if (!played) throw new Error(`Opponent ${decision.source} returned illegal move ${decision.move}`);
+      this.afterMove(s.turn === "w" ? "b" : "w", ply);
       this.decisions.push({
         ply: s.historyUci.length,
         fen,
@@ -119,7 +166,7 @@ export class Match {
 
   /** Take back the human's last move (and the opponent's reply, if any). */
   takeBack(): void {
-    if (this.thinking) return;
+    if (!this.canTakeBack) return;
     const s = this.session;
     const plies = s.turn === this.options.humanColor ? 2 : 1;
     s.undo(plies);
