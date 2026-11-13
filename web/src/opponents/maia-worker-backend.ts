@@ -3,6 +3,28 @@
  * exposes model-loading progress to the UI.
  */
 import type { MaiaBackend, MaiaPolicyInput, MaiaPolicyOutput } from "./maia3";
+import workerUrl from "../workers/maia.worker.ts?worker&url";
+
+/**
+ * Start the Maia worker. Sandboxed hosts (e.g. the preview iframe) give the page
+ * an opaque "null" origin, and browsers refuse `new Worker(url)` there. The
+ * worker bundle is a self-contained IIFE, so we can fetch it and start it from
+ * a Blob URL instead, which inherits the page's origin.
+ */
+async function startWorker(): Promise<Worker> {
+  const href = new URL(workerUrl, document.baseURI).href;
+  if (self.origin !== "null") {
+    try {
+      return new Worker(href);
+    } catch {
+      /* fall through to the Blob path */
+    }
+  }
+  const res = await fetch(href);
+  if (!res.ok) throw new Error(`Could not fetch Maia worker (HTTP ${res.status})`);
+  const blob = new Blob([await res.text()], { type: "text/javascript" });
+  return new Worker(URL.createObjectURL(blob));
+}
 
 /** Weights served from this site; checked against the SHA-256 published by maia3-ts v0.1.0. */
 export const MAIA3_WEIGHTS = {
@@ -18,15 +40,33 @@ export type LoadState =
   | { state: "error"; message: string };
 
 export class WorkerMaiaBackend implements MaiaBackend {
-  private worker: Worker;
+  private worker!: Worker;
   private nextId = 1;
   private pending = new Map<number, { resolve: (o: MaiaPolicyOutput) => void; reject: (e: Error) => void }>();
   private ready: Promise<void>;
   loadState: LoadState = { state: "idle" };
 
   constructor(onState: (s: LoadState) => void) {
-    this.worker = new Worker(new URL("../workers/maia.worker.ts", import.meta.url), { type: "module" });
-    this.ready = new Promise((resolve, reject) => {
+    this.ready = this.init(onState);
+    this.ready.catch(() => undefined); // surfaced via onState
+  }
+
+  private async init(onState: (s: LoadState) => void): Promise<void> {
+    this.loadState = { state: "loading", received: 0, total: MAIA3_WEIGHTS.bytes };
+    onState(this.loadState);
+    try {
+      this.worker = await startWorker();
+    } catch (err) {
+      this.loadState = { state: "error", message: (err as Error).message };
+      onState(this.loadState);
+      throw err;
+    }
+    const ready = new Promise<void>((resolve, reject) => {
+      this.worker.onerror = (e) => {
+        this.loadState = { state: "error", message: e.message || "Maia worker failed to start" };
+        onState(this.loadState);
+        reject(new Error(this.loadState.message));
+      };
       this.worker.onmessage = (e: MessageEvent) => {
         const m = e.data;
         if (m.type === "progress") {
@@ -49,11 +89,9 @@ export class WorkerMaiaBackend implements MaiaBackend {
         }
       };
     });
-    this.ready.catch(() => undefined); // surfaced via onState
-    this.loadState = { state: "loading", received: 0, total: MAIA3_WEIGHTS.bytes };
-    onState(this.loadState);
     const url = new URL(MAIA3_WEIGHTS.url, document.baseURI).href;
     this.worker.postMessage({ type: "load", url, sha256: MAIA3_WEIGHTS.sha256 });
+    return ready;
   }
 
   async policy(input: MaiaPolicyInput): Promise<MaiaPolicyOutput> {
