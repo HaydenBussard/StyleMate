@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- Source for the app icons. Rendered to PNG by scripts/make-icons.mjs (headless Chromium).
+     ?pad=N shrinks the knight for Android "maskable" icons, which get cropped to a circle. -->
+<html><head><style>
+  html,body{margin:0}
+  .icon{width:1024px;height:1024px;position:relative;overflow:hidden;
+    background:radial-gradient(circle at 50% 38%, #2e2920 0%, #1d1a15 55%, #15130f 100%);}
+  /* faint board squares along the bottom edge */
+  .board{position:absolute;left:0;right:0;bottom:0;height:25%;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(2,1fr);opacity:.22;
+    -webkit-mask-image:linear-gradient(to top,#000 20%,transparent 100%);mask-image:linear-gradient(to top,#000 20%,transparent 100%)}
+  .board i:nth-child(16n+1),.board i:nth-child(16n+3),.board i:nth-child(16n+5),.board i:nth-child(16n+7),
+  .board i:nth-child(16n+10),.board i:nth-child(16n+12),.board i:nth-child(16n+14),.board i:nth-child(16n+16){background:#d9a441}
+  .knight{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:"DejaVu Sans",sans-serif;color:#d9a441;font-size:calc(760px * var(--scale));line-height:1;
+    transform:translateY(-3%);text-shadow:0 18px 40px rgb(0 0 0 / .55)}
+</style></head><body>
+<div class="icon"><div class="board"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="knight">&#x265E;&#xFE0E;</div></div>
+<script>const pad=Number(new URLSearchParams(location.search).get('pad')||0);document.documentElement.style.setProperty('--scale',String(1-pad));</script>
+</body></html>
