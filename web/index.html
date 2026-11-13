@@ -39,10 +39,11 @@
         </div>
 
         <div class="board-wrap">
-          <div class="outcome" id="outcome" role="img" aria-label="Maia outcome estimate">
-            <div class="outcome-fill" id="outcome-fill"></div>
+          <button type="button" class="outcome" id="outcome" aria-describedby="outcome-tip" aria-expanded="false">
+            <span class="outcome-fill" id="outcome-fill"></span>
             <span class="outcome-label" id="outcome-label">—</span>
-          </div>
+          </button>
+          <div class="outcome-tip" id="outcome-tip" role="tooltip"></div>
           <div class="board" id="board" role="grid" aria-label="Chessboard"></div>
           <div class="model-overlay" id="model-overlay" hidden>
             <div class="model-card">

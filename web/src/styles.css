@@ -83,10 +83,10 @@ code, .mono { font-family: var(--font-mono); font-size: 13px; }
 .sq.dark .coord { color: var(--sq-light); }
 
 /* Outcome bar (Maia value head) */
-.outcome { position: relative; width: 24px; border-radius: 4px; background: #2b2620; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
-.outcome-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #efe8da; transition: height 400ms ease; }
+.outcome { position: relative; display: block; flex: none; padding: 0; border: 0; cursor: help; width: 24px; border-radius: 4px; background: #2b2620; overflow: hidden; box-shadow: inset 0 0 0 1px var(--border); }
+.outcome-fill { display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #efe8da; transition: height 400ms ease; }
 .outcome.flipped .outcome-fill { bottom: auto; top: 0; }
-.outcome-label { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-family: var(--font-mono); font-size: 10px; color: #2b2620; mix-blend-mode: normal; }
+.outcome-label { position: absolute; left: 0; right: 0; letter-spacing: -0.04em; bottom: 4px; text-align: center; font-family: var(--font-mono); font-size: 10px; color: #2b2620; mix-blend-mode: normal; }
 .outcome.flipped .outcome-label { bottom: auto; top: 4px; }
 
 .model-overlay { position: absolute; inset: 0 0 0 34px; display: grid; place-items: center; background: rgb(21 19 15 / 0.72); border-radius: 6px; backdrop-filter: blur(2px); }
@@ -200,3 +200,10 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
 .gameover-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
 .gameover form { margin: 0; }
 .btn.ghost { background: transparent; border-color: transparent; }
+
+/* Eval-bar explainer: hover on desktop, tap to toggle on touch screens. */
+.outcome:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.outcome-tip { position: absolute; left: 34px; top: 8px; z-index: 30; width: max-content; max-width: 230px; padding: 10px 12px; border-radius: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: 0 6px 20px rgb(0 0 0 / 0.45); font-size: 13px; line-height: 1.4; opacity: 0; visibility: hidden; transition: opacity 120ms ease; pointer-events: none; }
+.outcome-tip strong { display: block; margin-bottom: 2px; }
+.board-wrap.tip-open .outcome-tip { opacity: 1; visibility: visible; }
+@media (hover: hover) { .outcome:hover + .outcome-tip { opacity: 1; visibility: visible; } }
