@@ -99,3 +99,14 @@ Preview hosts can serve the page with an opaque (`null`) origin. There,
 from a Blob URL. That worker isn't a secure context, so `crypto.subtle` is
 missing; `core/sha256.ts` falls back to a tested pure-JS SHA-256 (about
 200 ms for the 20 MB weights).
+
+### 15. Arrows and circles are a separate, display-only layer
+
+Right-drag draws arrows and right-click circles squares, with Shift / Ctrl-Alt
+picking colours (the Lichess convention). They live in `ui/annotations.ts`:
+pure functions for the state (`toggle`, `colorFor`, `arrowPoints`, unit-tested)
+plus one SVG laid over the board with `pointer-events: none`, so it can never
+intercept a move. The board only starts drawing when no left-button drag is in
+progress, which keeps right-click-to-cancel (decision 10) working. Annotations
+never touch the game record and are cleared by a left click or the next move.
+Knight arrows bend in an L so they can't be misread as diagonals.
