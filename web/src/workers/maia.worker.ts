@@ -6,6 +6,7 @@
  * (the browser HTTP cache keeps them), verifies their SHA-256, and then
  * answers policy requests.
  */
+import { sha256Hex } from "../core/sha256";
 import { loadMaia, maiaPolicy, type MaiaModel } from "../vendor/maia3/index";
 
 type InMsg =
@@ -42,8 +43,7 @@ async function load(url: string, sha256: string): Promise<void> {
   } else {
     buf = await res.arrayBuffer();
   }
-  const digest = await crypto.subtle.digest("SHA-256", buf);
-  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = await sha256Hex(buf);
   if (hex !== sha256) throw new Error("Model checksum mismatch — refusing to load");
   model = loadMaia(buf);
 }
