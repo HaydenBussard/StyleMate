@@ -194,7 +194,7 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* Game-over popup */
-.gameover { min-width: 280px; max-width: 360px; text-align: center; }
+.gameover { min-width: 280px; max-width: 400px; text-align: center; }
 .gameover-title { margin: 0 0 6px; font-size: 22px; }
 .gameover-detail { margin: 0 0 18px; color: var(--muted, #a8a29e); font-size: 14px; }
 .gameover-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap; }
