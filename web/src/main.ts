@@ -416,11 +416,21 @@ function renderStyleReport(): void {
       <tbody>${rows}</tbody>
     </table>
     <div class="report-summary">
-      <div class="metric"><div class="metric-value">${r.meanKl.toFixed(3)}</div><div class="metric-label">Style cost · mean KL (nats)</div></div>
-      <div class="metric"><div class="metric-value">${(r.meanBaseProbability * 100).toFixed(0)}%</div><div class="metric-label">Avg. human probability of its moves</div></div>
+      <div class="metric"><div class="metric-value">${r.meanKl.toFixed(3)}</div><div class="metric-label">Style cost · 0 = plain Maia</div></div>
+      <div class="metric"><div class="metric-value">${(r.meanBaseProbability * 100).toFixed(0)}%</div><div class="metric-label">Avg. human probability · how typical its moves were</div></div>
     </div>
-    <p class="hint" style="margin-top:10px">Over ${r.moves} opponent move${r.moves === 1 ? "" : "s"}. "Pure Maia" is what the unstyled model would have done on average in the same positions.</p>`;
+    <p class="hint" style="margin-top:10px">Over ${r.moves} opponent move${r.moves === 1 ? "" : "s"}. ${klReading(r.meanKl)}</p>`;
 }
+
+/** One plain-language sentence for the current style cost. Thresholds are rough rules of thumb. */
+function klReading(kl: number): string {
+  if (kl < 0.005) return "Style cost is about zero: it's playing like plain Maia.";
+  if (kl < 0.1) return "Small style cost: a light nudge, still very human-like.";
+  if (kl < 0.4) return "Moderate style cost: the style is clearly shaping its choices.";
+  return "High style cost: the style is pulling it well away from typical human play.";
+}
+
+
 
 // ---- Utilities ---------------------------------------------------------------
 function download(filename: string, text: string, type: string): void {
@@ -578,7 +588,14 @@ document.addEventListener("click", () => {
   boardWrap.classList.remove("tip-open");
   els.outcome.setAttribute("aria-expanded", "false");
 });
-els.aboutBtn.addEventListener("click", () => els.about.showModal());
+// showModal() focuses the first button (Close, at the bottom), which scrolls the
+// guide to the end; reset to the top after opening.
+function openGuide(): void {
+  els.about.showModal();
+  els.about.scrollTop = 0;
+}
+els.aboutBtn.addEventListener("click", openGuide);
+document.getElementById("settings-help")?.addEventListener("click", openGuide);
 
 loadSettings();
 syncLabels();

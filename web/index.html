@@ -75,7 +75,7 @@
 
       <aside class="panel" aria-label="Game controls">
         <section class="card">
-          <h2>Opponent</h2>
+          <h2>Opponent <button type="button" class="link-btn guide-link" id="settings-help">What do these do?</button></h2>
           <div class="field">
             <label for="engine">Model</label>
             <select id="engine">
@@ -147,6 +147,26 @@
         <section class="card">
           <h2>Style report <span class="h-sub">this game</span></h2>
           <div id="style-report"><p class="hint">Measured after the opponent's first move.</p></div>
+          <!-- Lives outside #style-report so it stays open while the report redraws. -->
+          <details class="report-help">
+            <summary>What do these mean?</summary>
+          <dl class="guide">
+            <dt>Played / Pure Maia / Shift</dt>
+            <dd><strong>Played</strong> is what the opponent actually did. <strong>Pure Maia</strong> is what plain, unstyled Maia would have done on average in the same positions. <strong>Shift</strong> is the difference: green means more than plain Maia, red means less.</dd>
+            <dt>Captures, Checks, Castling</dt>
+            <dd>Share of its moves that captured a piece, gave check, or castled.</dd>
+            <dt>Leaves piece en prise</dt>
+            <dd>Share of moves that left the moved piece attacked and not safely defended: a loose or hanging piece.</dd>
+            <dt>King-zone pressure</dt>
+            <dd>Average change in how many squares around your king it attacks, from −1 to +1. Positive means its moves aim at your king.</dd>
+            <dt>Forward moves</dt>
+            <dd>How far its pieces move toward your side on average, from −1 (retreating) to +1 (advancing).</dd>
+            <dt>Style cost (KL)</dt>
+            <dd>How far the playstyle pulled it away from plain human-like play. 0 means no pull (Balanced is always 0). Below about 0.1 is a light nudge; above about 0.4 is a strong pull. Technically: the average KL divergence, in nats, between the styled and plain move probabilities.</dd>
+            <dt>Avg. human probability</dt>
+            <dd>On average, how often players at that rating would have chosen the moves it played. Higher means more typical; chess has many reasonable moves, so 20–40% is normal.</dd>
+          </dl>
+  </details>
         </section>
 
         <section class="card">
@@ -178,13 +198,49 @@
       <form method="dialog"><button class="btn ghost">Close</button></form>
     </dialog>
 
-    <dialog id="about" class="dialog about">
-      <h2>How it works</h2>
-      <p><strong>Maia-3</strong> is a neural network from the University of Toronto's CSSLab trained to predict the move a human at a given rating would play — not the best move. This app runs its 5M-parameter version entirely in your browser, so there is no server.</p>
-      <p>Each turn the model returns a probability for every legal move. The opponent samples from that distribution, so it makes the mistakes players at that rating make, in roughly the proportions they make them.</p>
-      <p><strong>Playstyles</strong> tilt Maia's probabilities toward measurable move features (checks, captures, advancing, safety, castling). The style report compares what the opponent actually played with what plain Maia would have done in the same positions, and shows the cost in human-likeness (KL divergence).</p>
-      <p><strong>Limits:</strong> style weights are hand-tuned, not learned from real players; the rating slider sets Maia's conditioning, it is not a calibrated playing strength; the clock is for you — Maia-3 was not trained on clock times, so it does not play faster or worse under time pressure the way humans do.</p>
-      <p class="hint">Maia-3 © CSSLab, AGPL-3.0 · TypeScript port: maia3-ts (AGPL-3.0) · Rules: chess.js (BSD-2). This app is AGPL-3.0; download the full source from the header link.</p>
+    <dialog id="about" class="dialog about" aria-labelledby="about-title">
+      <h2 id="about-title">How StyleMate works</h2>
+      <p>StyleMate is a chess opponent that plays like a <strong>person</strong> at the rating you pick, not like an engine. It runs <strong>Maia-3</strong>, a neural network trained on millions of human games to predict the move a player at a given rating would actually make, mistakes included. Everything runs in your browser: the model (about 20 MB) downloads once and is cached, and there is no server or account.</p>
+
+      <h3>Opponent settings</h3>
+      <dl class="guide">
+        <dt>Model</dt>
+        <dd><strong>Maia-3</strong> is the human-like opponent. <strong>Placeholder bot</strong> is a simple rule-based bot kept for testing; it is not human-like.</dd>
+        <dt>Opponent rating</dt>
+        <dd>The rating Maia imitates (600–2600, Lichess blitz scale). A 1200 opponent plays the kinds of moves, and makes the kinds of mistakes, typical of 1200 players. It is the rating it imitates, not a measured strength.</dd>
+        <dt>Your rating</dt>
+        <dd>Maia is also told who it is playing against, because people play a little differently against stronger or weaker opponents. It also feeds the eval bar. It doesn't change your side of the game.</dd>
+        <dt>Playstyle</dt>
+        <dd>
+          <strong>Balanced</strong> is plain Maia: the moves real players at that rating choose, in the same proportions.<br />
+          <strong>Aggressive</strong> leans toward checks, captures, pushing forward and attacking the king, and is more willing to leave pieces loose.<br />
+          <strong>Solid</strong> leans toward castling and safe squares, and avoids leaving pieces hanging.
+        </dd>
+        <dt>Style strength</dt>
+        <dd>How hard the style pulls (0–100%). At 0% it's plain Maia; higher values make the style more noticeable. Maia still only picks from moves a human at that rating might plausibly play; the style just changes which of those it prefers. Not used with Balanced.</dd>
+        <dt>You play / Clock</dt>
+        <dd>Choose White, Black or Random, and a time control or no clock. Take-back is off in timed games. Maia wasn't trained on clock times, so it doesn't speed up or panic in time trouble.</dd>
+      </dl>
+      <p class="hint">Opponent settings start a new game when changed, so a game record always matches one setup. Display settings (eval bar, sounds) apply immediately.</p>
+
+      <h3>What the panels show</h3>
+      <dl class="guide">
+        <dt>Eval bar</dt>
+        <dd>Maia's predicted score for White, for players at these two ratings: a win chance, not an engine evaluation. A big rating gap moves it a lot even in an equal position. Hover or tap the bar for details.</dd>
+        <dt>Opponent's last decision</dt>
+        <dd>The moves Maia considered and how often players at that rating would choose each one. The highlighted row is the one it played. It picks at random according to these odds, which is why it doesn't always play its top choice.</dd>
+        <dt>Style report</dt>
+        <dd>How the opponent's moves differ from plain Maia's in the same positions: captures, checks, king pressure, forward moves, loose pieces and castling. <strong>Style cost</strong> (KL divergence) measures how far the style pulled it from typical human play: 0 means no pull, under about 0.1 is a light nudge, over about 0.4 is a strong pull. <strong>Avg. human probability</strong> is how often players at that rating would have chosen its moves.</dd>
+        <dt>Export</dt>
+        <dd>Download or copy the game as PGN to analyze it on Lichess or Chess.com. The <strong>decision log</strong> (JSONL) records every opponent move with its probabilities, for anyone who wants to analyze the data.</dd>
+      </dl>
+
+      <h3>Controls</h3>
+      <p>Click or drag pieces. While dragging, right-click or press Esc to cancel the move. Flip board turns the board around without changing sides.</p>
+
+      <h3>Limits</h3>
+      <p>The style weights are hand-tuned starting points, not learned from real players. The rating slider sets what Maia imitates; it is not a calibrated playing strength.</p>
+      <p class="hint">Maia-3 © CSSLab (University of Toronto), AGPL-3.0 · TypeScript port: maia3-ts (AGPL-3.0) · Rules: chess.js (BSD-2). This app is AGPL-3.0; download the full source from the header link.</p>
       <form method="dialog"><button class="btn primary">Close</button></form>
     </dialog>
 
