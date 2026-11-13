@@ -2,6 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Stop iOS Safari turning ranges like "600–2600" into phone-number links. -->
+    <meta name="format-detection" content="telephone=no" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>StyleMate — human-like chess, at the rating and style you choose</title>
     <meta name="description" content="StyleMate: play chess against Maia-3, a model of how humans at a chosen rating actually play, with selectable playstyles whose effect is measured every game." />
@@ -199,7 +201,7 @@
     </dialog>
 
     <dialog id="about" class="dialog about" aria-labelledby="about-title">
-      <h2 id="about-title">How StyleMate works</h2>
+      <h2 id="about-title" tabindex="-1" autofocus>How StyleMate works</h2>
       <p>StyleMate is a chess opponent that plays like a <strong>person</strong> at the rating you pick, not like an engine. It runs <strong>Maia-3</strong>, a neural network trained on millions of human games to predict the move a player at a given rating would actually make, mistakes included. Everything runs in your browser: the model (about 20 MB) downloads once and is cached, and there is no server or account.</p>
 
       <h3>Opponent settings</h3>

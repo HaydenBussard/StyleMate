@@ -588,11 +588,16 @@ document.addEventListener("click", () => {
   boardWrap.classList.remove("tip-open");
   els.outcome.setAttribute("aria-expanded", "false");
 });
-// showModal() focuses the first button (Close, at the bottom), which scrolls the
-// guide to the end; reset to the top after opening.
+// By default showModal() focuses the first button (Close, at the bottom), and
+// some mobile browsers scroll the guide to it. The title has autofocus so focus
+// starts at the top; we also focus it ourselves without scrolling and reset the
+// scroll position on the next frame for browsers that ignore autofocus.
 function openGuide(): void {
   els.about.showModal();
+  const title = document.getElementById("about-title");
+  title?.focus({ preventScroll: true });
   els.about.scrollTop = 0;
+  requestAnimationFrame(() => (els.about.scrollTop = 0));
 }
 els.aboutBtn.addEventListener("click", openGuide);
 document.getElementById("settings-help")?.addEventListener("click", openGuide);
