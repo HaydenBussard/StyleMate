@@ -126,6 +126,10 @@
             <span>Show eval bar</span>
           </label>
           <p class="hint">The bar shows Maia-3's predicted result for players at these ratings. Hiding it takes effect right away.</p>
+          <label class="check" for="sound-on">
+            <input type="checkbox" id="sound-on" checked />
+            <span>Move sounds</span>
+          </label>
         </section>
 
         <section class="card">
@@ -160,6 +164,16 @@
       <p class="dialog-title">Promote to</p>
       <div class="promo-options"></div>
       <form method="dialog"><button class="btn" value="">Cancel</button></form>
+    </dialog>
+
+    <dialog id="gameover" class="dialog gameover" aria-labelledby="gameover-title">
+      <h2 id="gameover-title" class="gameover-title"></h2>
+      <p id="gameover-detail" class="gameover-detail"></p>
+      <div class="gameover-actions">
+        <button type="button" id="rematch" class="btn primary">Rematch</button>
+        <button type="button" id="gameover-pgn" class="btn">Download PGN</button>
+      </div>
+      <form method="dialog"><button class="btn ghost">Close</button></form>
     </dialog>
 
     <dialog id="about" class="dialog about">

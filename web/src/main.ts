@@ -13,6 +13,7 @@ import { PlaceholderOpponent } from "./opponents/placeholder";
 import { FEATURE_KEYS, FEATURE_LABELS, STYLES, type StyleId } from "./opponents/style";
 import type { Opponent } from "./opponents/types";
 import { BoardView } from "./ui/board";
+import { SoundPlayer, soundForSan } from "./ui/sound";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -49,6 +50,12 @@ const els = {
   youMeta: $("you-meta"),
   outcome: $("outcome"),
   showEval: $<HTMLInputElement>("show-eval"),
+  soundOn: $<HTMLInputElement>("sound-on"),
+  gameover: $<HTMLDialogElement>("gameover"),
+  gameoverTitle: $<HTMLElement>("gameover-title"),
+  gameoverDetail: $<HTMLElement>("gameover-detail"),
+  rematch: $<HTMLButtonElement>("rematch"),
+  gameoverPgn: $<HTMLButtonElement>("gameover-pgn"),
   play: document.querySelector<HTMLElement>(".play")!,
   outcomeFill: $("outcome-fill"),
   outcomeLabel: $("outcome-label"),
@@ -282,6 +289,58 @@ function render(): void {
   els.resign.disabled = st.over || s.historyUci.length === 0;
   els.downloadLog.disabled = match.decisions.length === 0;
   els.pgnPreview.value = s.toPgn();
+  reactToChanges();
+}
+
+// ---- Sounds and game-over popup ----------------------------------------------
+// render() runs after every change, so it's the one place that can notice "a
+// move was just added" or "the game just ended", whatever caused it (you, the
+// opponent, the clock, resigning). We remember what we last saw and react to
+// the difference, so each move plays one sound and each game pops up once.
+const sound = new SoundPlayer();
+let seenMatch: Match | undefined;
+let seenPly = 0;
+let announcedOver = false;
+
+function reactToChanges(): void {
+  const st = match.session.status();
+  const san = match.session.historySan;
+  if (match !== seenMatch) {
+    // New game: nothing to announce yet.
+    seenMatch = match;
+    seenPly = san.length;
+    announcedOver = st.over;
+    els.gameover.close();
+    return;
+  }
+  let played = false;
+  if (san.length > seenPly) {
+    sound.play(st.over ? "end" : soundForSan(san[san.length - 1]));
+    played = true;
+  }
+  if (san.length < seenPly) announcedOver = st.over; // take-back
+  seenPly = san.length;
+  if (st.over && !announcedOver) {
+    announcedOver = true;
+    if (!played) sound.play("end"); // resignation or flag: no move was made
+    showGameOver();
+  }
+}
+
+function showGameOver(): void {
+  const st = match.session.status();
+  const human = match.options.humanColor;
+  const won = (st.result === "1-0" && human === "w") || (st.result === "0-1" && human === "b");
+  els.gameoverTitle.textContent = st.result === "1/2-1/2" ? "Draw" : won ? "You won" : "You lost";
+  const winner = st.result === "1/2-1/2" ? "Draw" : st.result === "1-0" ? "White wins" : "Black wins";
+  const moves = Math.ceil(match.session.historySan.length / 2);
+  els.gameoverDetail.textContent =
+    `${winner} · ${st.reason === "timeout" ? "on time" : st.reason} · ${moves} move${moves === 1 ? "" : "s"}`;
+  // Short pause so you see the final move land before the popup covers it.
+  const current = match;
+  window.setTimeout(() => {
+    if (current === match && !els.gameover.open) els.gameover.showModal();
+  }, 700);
 }
 
 function renderDecision(): void {
@@ -389,6 +448,7 @@ function saveSettings(): void {
       SETTING_IDS.map((id) => [id, ($(id) as HTMLInputElement).value]),
     );
     data.showEval = els.showEval.checked;
+    data.sound = els.soundOn.checked;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   } catch {
     /* storage unavailable (private mode / sandboxed preview) — settings just won't persist */
@@ -399,6 +459,7 @@ function loadSettings(): void {
     const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? localStorage.getItem(LEGACY_SETTINGS_KEY) ?? "{}") as Record<string, unknown>;
     for (const id of SETTING_IDS) if (typeof data[id] === "string") ($(id) as HTMLInputElement).value = data[id];
     if (typeof data.showEval === "boolean") els.showEval.checked = data.showEval;
+    if (typeof data.sound === "boolean") els.soundOn.checked = data.sound;
   } catch {
     /* ignore */
   }
@@ -449,9 +510,20 @@ els.resign.addEventListener("click", () => {
   match.resign();
   render();
 });
-els.downloadPgn.addEventListener("click", () => {
+function downloadPgn(): void {
   download(`stylemate-${stamp()}.pgn`, match.session.toPgn(), "application/x-chess-pgn");
   toast("PGN downloaded");
+}
+els.downloadPgn.addEventListener("click", downloadPgn);
+els.gameoverPgn.addEventListener("click", downloadPgn);
+// Rematch = same settings, fresh game (startGame reads the current settings).
+els.rematch.addEventListener("click", () => {
+  els.gameover.close();
+  startGame();
+});
+els.soundOn.addEventListener("change", () => {
+  sound.muted = !els.soundOn.checked;
+  saveSettings();
 });
 els.copyPgn.addEventListener("click", async () => {
   try {
@@ -471,6 +543,7 @@ els.aboutBtn.addEventListener("click", () => els.about.showModal());
 loadSettings();
 syncLabels();
 syncEvalVisibility();
+sound.muted = !els.soundOn.checked;
 startGame();
 
 // Handy for debugging from the browser console.
