@@ -217,3 +217,4 @@ input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
 .report-help { margin-top: 10px; font-size: 13px; }
 .report-help summary { cursor: pointer; color: var(--accent); font-weight: 500; }
 .report-help .guide dd { font-size: 13px; }
+#about-title:focus { outline: none; }
