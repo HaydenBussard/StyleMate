@@ -57,6 +57,7 @@ const els = {
   gameoverDetail: $<HTMLElement>("gameover-detail"),
   rematch: $<HTMLButtonElement>("rematch"),
   gameoverPgn: $<HTMLButtonElement>("gameover-pgn"),
+  gameoverCopy: $<HTMLButtonElement>("gameover-copy"),
   play: document.querySelector<HTMLElement>(".play")!,
   outcomeFill: $("outcome-fill"),
   outcomeLabel: $("outcome-label"),
@@ -528,14 +529,38 @@ els.soundOn.addEventListener("change", () => {
   sound.muted = !els.soundOn.checked;
   saveSettings();
 });
-els.copyPgn.addEventListener("click", async () => {
+/**
+ * Copy the PGN. Uses the Clipboard API, with the older execCommand fallback for
+ * browsers/contexts that block it. The fallback textarea is placed inside the
+ * open popup if there is one, because a modal dialog makes the rest of the page
+ * unselectable.
+ */
+async function copyPgn(): Promise<boolean> {
+  const pgn = match.session.toPgn();
   try {
-    await navigator.clipboard.writeText(match.session.toPgn());
-    toast("PGN copied");
+    await navigator.clipboard.writeText(pgn);
+    return true;
   } catch {
-    els.pgnPreview.select();
-    toast("Clipboard unavailable — PGN selected, press Ctrl/Cmd+C");
+    const host = els.gameover.open ? els.gameover : document.body;
+    const ta = Object.assign(document.createElement("textarea"), { value: pgn, readOnly: true });
+    ta.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+    host.append(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
   }
+}
+els.copyPgn.addEventListener("click", async () => {
+  if (await copyPgn()) return toast("PGN copied");
+  els.pgnPreview.select();
+  toast("Clipboard unavailable — PGN selected, press Ctrl/Cmd+C");
+});
+// In the popup the toast is hidden behind the backdrop, so the button itself confirms.
+els.gameoverCopy.addEventListener("click", async () => {
+  const ok = await copyPgn();
+  els.gameoverCopy.textContent = ok ? "Copied" : "Copy failed";
+  window.setTimeout(() => (els.gameoverCopy.textContent = "Copy PGN"), 1600);
 });
 els.downloadLog.addEventListener("click", () => {
   download(`stylemate-decisions-${stamp()}.jsonl`, match.decisionsJsonl(), "application/jsonl");
