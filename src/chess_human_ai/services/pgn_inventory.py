@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,12 +23,22 @@ class PgnInventory:
     dates: list[str]
 
 
-def is_hayden(name: str) -> bool:
-    normalized = name.strip().lower()
-    return normalized in {
-        "ohaydinho",
-        "hayden bussard",
-    }
+PLAYER_NAMES_ENV = "CHESS_HUMAN_AI_PLAYERS"
+
+
+def player_names() -> set[str]:
+    """Names (case-insensitive) that count as "you" in a PGN.
+
+    Read from the CHESS_HUMAN_AI_PLAYERS environment variable, comma-separated,
+    e.g. CHESS_HUMAN_AI_PLAYERS="myLichessName,My Real Name". Kept out of the
+    code so the public source never contains personal account names.
+    """
+    raw = os.environ.get(PLAYER_NAMES_ENV, "")
+    return {n.strip().lower() for n in raw.split(",") if n.strip()}
+
+
+def is_player(name: str) -> bool:
+    return name.strip().lower() in player_names()
 
 
 def inventory_pgn(pgn_path: Path) -> PgnInventory:
@@ -69,8 +80,8 @@ def inventory_pgn(pgn_path: Path) -> PgnInventory:
             if date and date != "????.??.??":
                 dates.append(date)
 
-            played_white = is_hayden(white)
-            played_black = is_hayden(black)
+            played_white = is_player(white)
+            played_black = is_player(black)
 
             if played_white:
                 white_games += 1
