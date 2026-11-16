@@ -7,7 +7,7 @@ opponents. The repo has two parts:
 
 ```text
 web/                  StyleMate web app (TypeScript) — playable product
-src/chess_human_ai/   Python data tools (PGN inventory/manifest) — analysis pipeline
+src/stylemate/        Python data tools (PGN inventory/manifest) — analysis pipeline
 docs/                 Research, architecture, decisions, evaluation results
 ```
 

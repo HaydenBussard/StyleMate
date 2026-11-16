@@ -1,8 +1,8 @@
-# Chess Human AI
+# StyleMate
 
 Tools for analyzing, modeling and playing against human-like chess decisions.
 
-**StyleMate** (`web/`) is a browser app where you play Maia-3 — a neural
+The StyleMate web app (`web/`) is a browser app where you play Maia-3 — a neural
 network trained to predict the move a human at a chosen rating would play —
 with selectable, *measured* playstyles. It runs entirely client-side: no
 server, no API keys, $0 compute.
@@ -43,7 +43,7 @@ npm run release      # source.zip + production build in web/dist
 ## Python tools
 
 ```text
-src/chess_human_ai/   PGN inventory and manifest commands
+src/stylemate/        PGN inventory and manifest commands
 tests/                pytest suite
 ```
 
@@ -55,7 +55,7 @@ To have `inventory` and `manifest` recognise your own games, list your player
 names (comma-separated) in an environment variable instead of the code:
 
 ```bash
-export CHESS_HUMAN_AI_PLAYERS="yourLichessName,Your Name"
+export STYLEMATE_PLAYERS="yourLichessName,Your Name"
 ```
 
 Planned: Stockfish move-quality labelling of PGNs, player style profiles from

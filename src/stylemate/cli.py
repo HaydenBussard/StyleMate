@@ -3,13 +3,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from chess_human_ai.services.pgn_inventory import inventory_pgn
-from chess_human_ai.services.pgn_manifest import create_manifest
+from stylemate.services.pgn_inventory import inventory_pgn
+from stylemate.services.pgn_manifest import create_manifest
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="chess-human-ai",
+        prog="stylemate",
         description="Tools for analyzing and modeling human chess decisions.",
     )
 

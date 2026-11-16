@@ -1,4 +1,4 @@
-from chess_human_ai.domain.models import MoveLabel
+from stylemate.domain.models import MoveLabel
 
 
 def test_move_label_value() -> None:

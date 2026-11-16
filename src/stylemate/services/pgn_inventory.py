@@ -23,17 +23,19 @@ class PgnInventory:
     dates: list[str]
 
 
-PLAYER_NAMES_ENV = "CHESS_HUMAN_AI_PLAYERS"
+PLAYER_NAMES_ENV = "STYLEMATE_PLAYERS"
+LEGACY_PLAYER_NAMES_ENV = "CHESS_HUMAN_AI_PLAYERS"  # pre-rename name, still honoured
 
 
 def player_names() -> set[str]:
     """Names (case-insensitive) that count as "you" in a PGN.
 
-    Read from the CHESS_HUMAN_AI_PLAYERS environment variable, comma-separated,
-    e.g. CHESS_HUMAN_AI_PLAYERS="myLichessName,My Real Name". Kept out of the
-    code so the public source never contains personal account names.
+    Read from the STYLEMATE_PLAYERS environment variable, comma-separated,
+    e.g. STYLEMATE_PLAYERS="myLichessName,My Real Name". Kept out of the
+    code so the public source never contains personal account names. The old
+    CHESS_HUMAN_AI_PLAYERS name is used as a fallback.
     """
-    raw = os.environ.get(PLAYER_NAMES_ENV, "")
+    raw = os.environ.get(PLAYER_NAMES_ENV) or os.environ.get(LEGACY_PLAYER_NAMES_ENV, "")
     return {n.strip().lower() for n in raw.split(",") if n.strip()}
 
 

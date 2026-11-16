@@ -6,7 +6,7 @@ from pathlib import Path
 
 import chess.pgn
 
-from chess_human_ai.services.pgn_inventory import is_player
+from stylemate.services.pgn_inventory import is_player
 
 
 @dataclass(frozen=True)
